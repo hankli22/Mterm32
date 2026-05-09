@@ -122,7 +122,7 @@ void MenuManager::handleInput() {
           }
         }
         if (setIdx < setScroll) setScroll = setIdx;
-        if (setIdx > setScroll + 3) setScroll = setIdx - 3;
+        if (setIdx > setScroll + 2) setScroll = setIdx - 2;
       } else {
         if (evt == BTN_UP_PRESSED || evt == BTN_DOWN_PRESSED) {
           int dir = (evt == BTN_DOWN_PRESSED) ? 1 : -1;

@@ -32,7 +32,7 @@ void drawSettings(Canvas& cv) {
 
   for (int i = 0; i < 14; i++) {
     float itemY = 27 + i * 15 - vy;
-    if (itemY < 0 || itemY > 75) continue;
+    if (itemY < 0 || itemY > 63) continue;
 
     float dist = abs(itemY - curY);
     float offsetX = (dist < 15.0f) ? 6.0f * (1.0f - (dist / 15.0f)) : 0;

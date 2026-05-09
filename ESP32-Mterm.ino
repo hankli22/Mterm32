@@ -10,11 +10,12 @@ TaskHandle_t uiTaskHandle;
 TaskHandle_t logicTaskHandle;
 
 void uiTask(void* pvParameters) {
+  TickType_t xLastWakeTime = xTaskGetTickCount();
   for (;;) {
     HAL::updateButtons();
     MenuManager::handleInput();
     MenuManager::update();
-    vTaskDelay(pdMS_TO_TICKS(16));
+    vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(16));
   }
 }
 
