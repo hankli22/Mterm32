@@ -81,19 +81,5 @@ void drawSport2(Canvas& cv) {
 }
 
 void drawSport3(Canvas& cv) {
-  cv.setFont(u8g2_font_6x10_tf);
-  cv.drawStr(2, 10, "Live Track");
-
-  cv.setCursor(2, 25);
-  cv.print("D: ");
-  cv.print((int)GPSCalc::totalDistance);
-  cv.setCursor(2, 40);
-  cv.print("P: ");
-  cv.print(GPSCalc::paceMin);
-  cv.print("'");
-  cv.print(GPSCalc::paceSec);
-  cv.setCursor(2, 55);
-  cv.print("C: ");
-  cv.print(GPSCalc::calories);
-  drawTrackMap(cv, 70, 12, 0);
+  drawFullMapHUD(cv);
 }

@@ -17,5 +17,6 @@ void drawSport2(Canvas& cv);
 void drawSport3(Canvas& cv);
 void drawSummary(Canvas& cv);
 void drawTrackMap(Canvas& cv, int ox, int oy, int lapIdx);
+void drawFullMapHUD(Canvas& cv);
 
 #endif
