@@ -172,7 +172,14 @@ void MenuManager::handleInput() {
           HAL::getDisplay()->setContrast(sysCfg.contrast * 51);
           isEditing = false;
         }
-        if (evt == BTN_RIGHT_PRESSED) { isEditing = false; }
+        if (evt == BTN_RIGHT_PRESSED) {
+          if (setIdx == 1) {
+            if (sysCfg.record_freq >= 5.0) Serial1.println("$PCAS02,200*1D");
+            else if (sysCfg.record_freq >= 2.0) Serial1.println("$PCAS02,500*1A");
+            else Serial1.println("$PCAS02,1000*2E");
+          }
+          isEditing = false;
+        }
       }
       break;
 
@@ -303,7 +310,12 @@ void MenuManager::update() {
   static bool contrastInit = false;
   if (!contrastInit) {
     HAL::getDisplay()->setContrast(sysCfg.contrast * 51);
+    lastActiveTime = millis();
     contrastInit = true;
+  }
+
+  if (sysCfg.auto_sleep && millis() - lastActiveTime > 300000UL) {
+    HAL::sleepDevice();
   }
 
   if (sysCfg.screen_off > 0 && !isScreenOff) {
