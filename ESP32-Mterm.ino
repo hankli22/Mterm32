@@ -27,6 +27,7 @@ void logicTask(void* pvParameters) {
 
 void setup() {
   Serial.begin(115200);
+  Serial.setRxBufferSize(1024);  // 电脑发过来的指令缓冲区
   loadConfig();
   HAL::init();
   GPSCalc::init();

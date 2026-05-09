@@ -60,7 +60,8 @@ void GPSCalc::unlock() {
 
 void GPSCalc::init() {
   mutex = xSemaphoreCreateMutex();
-  Serial1.begin(9600, SERIAL_8N1, 17, 18);
+  Serial1.begin(9600, SERIAL_8N1, RX_GPS, TX_GPS);
+  Serial1.setRxBufferSize(1024);
   if (sysCfg.record_freq >= 5.0) Serial1.println("$PCAS02,200*1D");
   else if (sysCfg.record_freq >= 2.0) Serial1.println("$PCAS02,500*1A");
   else Serial1.println("$PCAS02,1000*2E");

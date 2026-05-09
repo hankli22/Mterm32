@@ -14,6 +14,9 @@
 
 #define BAT_ADC 0
 
+#define RX_GPS 17
+#define TX_GPS 18
+
 enum BtnEvent { BTN_NONE,
                 BTN_UP_PRESSED,
                 BTN_DOWN_PRESSED,
