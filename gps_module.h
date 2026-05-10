@@ -14,6 +14,13 @@
 class KalmanFilter4D {
 public:
   KalmanFilter4D();
+
+  // Tunable constants
+  static constexpr float Q_ACCEL = 0.25f;    // process noise (m/s²)²
+  static constexpr float R_POS   = 25.0f;    // measurement noise m²
+  static constexpr float INNOV_GATE = 50.0f; // reset on innovation > N meters
+  static constexpr float DT_MAX  = 2.0f;     // cap dt to prevent Q*dt⁴ blowup
+
   void reset(double lat, double lng);
   void predict(float dt);
   void update(double measLat, double measLng);
@@ -26,12 +33,11 @@ public:
   float courseDeg() const;
 
 private:
-  float x_[4];        // [east_m, north_m, v_east, v_north]
-  float P_[4][4];     // covariance
-  double originLat_, originLng_;
-  double lastLat_, lastLng_;
+  float x_[4];         // [east_m, north_m, v_east, v_north]
+  float P_[4][4];      // covariance
+  float originLat_, originLng_;
+  float cosOrigin_;    // cached cos(originLat_ * DEG2RAD)
   bool ready_;
-  uint32_t lastPredictMs_;
 };
 
 struct SatData {

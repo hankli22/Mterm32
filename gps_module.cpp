@@ -65,99 +65,103 @@ void GPSCalc::unlock() {
 
 // ===================== KalmanFilter4D =====================
 
-static inline double latToM(double dlat) { return dlat * 111320.0; }
-static inline double lngToM(double dlng, double lat) {
-  return dlng * 111320.0 * cos(lat * 0.01745329252);
-}
+static constexpr float DEG2RAD = 0.01745329252f;
+static constexpr float METER_PER_DEG = 111320.0f;
 
-KalmanFilter4D::KalmanFilter4D() : ready_(false), lastPredictMs_(0) {
+static inline float latToM(float dlat) { return dlat * METER_PER_DEG; }
+static inline float lngToM(float dlng, float cosLat) { return dlng * METER_PER_DEG * cosLat; }
+
+KalmanFilter4D::KalmanFilter4D() : ready_(false) {
   memset(x_, 0, sizeof(x_));
   memset(P_, 0, sizeof(P_));
 }
 
 void KalmanFilter4D::reset(double lat, double lng) {
-  originLat_ = lat;
-  originLng_ = lng;
-  lastLat_ = lat;
-  lastLng_ = lng;
+  originLat_ = (float)lat;
+  originLng_ = (float)lng;
+  cosOrigin_ = cosf(originLat_ * DEG2RAD);
   x_[0] = 0;  x_[1] = 0;  x_[2] = 0;  x_[3] = 0;
   memset(P_, 0, sizeof(P_));
-  P_[0][0] = 25.0f;  P_[1][1] = 25.0f;   // pos variance ~5m
-  P_[2][2] = 4.0f;   P_[3][3] = 4.0f;    // vel variance ~2m/s
+  P_[0][0] = R_POS;  P_[1][1] = R_POS;
+  P_[2][2] = 4.0f;   P_[3][3] = 4.0f;
   ready_ = true;
-  lastPredictMs_ = millis();
 }
 
 void KalmanFilter4D::predict(float dt) {
   if (!ready_ || dt <= 0) return;
 
-  // State transition: pos += vel * dt
   x_[0] += x_[2] * dt;
   x_[1] += x_[3] * dt;
 
-  // P = F*P*F' + Q, F = [1 0 dt 0; 0 1 0 dt; 0 0 1 0; 0 0 0 1]
-  float FPF[4][4];
+  // P = F*P*F' + Q
+  // F = [1 0 dt 0; 0 1 0 dt; 0 0 1 0; 0 0 0 1]
+  // Step 1: tmp = P * F'
+  float tmp[4][4];
   for (int i = 0; i < 4; i++) {
-    FPF[i][0] = P_[i][0] + P_[i][2] * dt;
-    FPF[i][1] = P_[i][1] + P_[i][3] * dt;
-    FPF[i][2] = P_[i][2];
-    FPF[i][3] = P_[i][3];
+    tmp[i][0] = P_[i][0] + P_[i][2] * dt;
+    tmp[i][1] = P_[i][1] + P_[i][3] * dt;
+    tmp[i][2] = P_[i][2];
+    tmp[i][3] = P_[i][3];
   }
-  // Multiply by F' from left: P_new = F * FPF (where FPF = P * F')
+
+  // Step 2: P_new = F * tmp + Q
+  // Row i of P_new = tmp[i] + dt*tmp[i+2] (for i=0,1) or tmp[i] (for i=2,3), plus Q
   float dt2 = dt * dt;
   float dt3 = dt2 * dt;
   float dt4 = dt2 * dt2;
-  float q = 0.25f;  // process noise ~0.5 m/s² acceleration
 
-  P_[0][0] = FPF[0][0] + FPF[0][2] * dt + q * dt4 / 4;
-  P_[0][1] = FPF[0][1] + FPF[0][3] * dt;
-  P_[0][2] = FPF[0][2] + q * dt3 / 2;
-  P_[0][3] = FPF[0][3];
+  P_[0][0] = tmp[0][0] + dt * tmp[2][0] + Q_ACCEL * dt4 / 4;
+  P_[0][1] = tmp[0][1] + dt * tmp[2][1];
+  P_[0][2] = tmp[0][2] + dt * tmp[2][2] + Q_ACCEL * dt3 / 2;
+  P_[0][3] = tmp[0][3] + dt * tmp[2][3];
 
-  P_[1][0] = FPF[1][0] + FPF[1][2] * dt;
-  P_[1][1] = FPF[1][1] + FPF[1][3] * dt + q * dt4 / 4;
-  P_[1][2] = FPF[1][2];
-  P_[1][3] = FPF[1][3] + q * dt3 / 2;
+  P_[1][0] = tmp[1][0] + dt * tmp[3][0];
+  P_[1][1] = tmp[1][1] + dt * tmp[3][1] + Q_ACCEL * dt4 / 4;
+  P_[1][2] = tmp[1][2] + dt * tmp[3][2];
+  P_[1][3] = tmp[1][3] + dt * tmp[3][3] + Q_ACCEL * dt3 / 2;
 
-  P_[2][0] = FPF[2][0] + q * dt3 / 2;
-  P_[2][1] = FPF[2][1];
-  P_[2][2] = FPF[2][2] + q * dt2;
-  P_[2][3] = FPF[2][3];
+  P_[2][0] = tmp[2][0] + Q_ACCEL * dt3 / 2;
+  P_[2][1] = tmp[2][1];
+  P_[2][2] = tmp[2][2] + Q_ACCEL * dt2;
+  P_[2][3] = tmp[2][3];
 
-  P_[3][0] = FPF[3][0];
-  P_[3][1] = FPF[3][1] + q * dt3 / 2;
-  P_[3][2] = FPF[3][2];
-  P_[3][3] = FPF[3][3] + q * dt2;
+  P_[3][0] = tmp[3][0];
+  P_[3][1] = tmp[3][1] + Q_ACCEL * dt3 / 2;
+  P_[3][2] = tmp[3][2];
+  P_[3][3] = tmp[3][3] + Q_ACCEL * dt2;
+
+  // Enforce symmetry (float rounding may introduce tiny asymmetry)
+  for (int i = 0; i < 4; i++) {
+    for (int j = i + 1; j < 4; j++) {
+      P_[i][j] = P_[j][i] = (P_[i][j] + P_[j][i]) * 0.5f;
+    }
+  }
 }
 
 void KalmanFilter4D::update(double measLat, double measLng) {
   if (!ready_) return;
 
-  // Convert measurement to local meters
-  double zx = lngToM(measLng - originLng_, originLat_);
-  double zy = latToM(measLat - originLat_);
+  float zx = lngToM((float)(measLng - originLng_), cosOrigin_);
+  float zy = latToM((float)(measLat - originLat_));
 
-  // Innovation: y = z - H*x, H = [1 0 0 0; 0 1 0 0]
   float innov[2];
-  innov[0] = (float)(zx - x_[0]);
-  innov[1] = (float)(zy - x_[1]);
+  innov[0] = zx - x_[0];
+  innov[1] = zy - x_[1];
 
-  // Innovation check: if jump > 50m, reset filter
   float innovDist = sqrtf(innov[0] * innov[0] + innov[1] * innov[1]);
-  if (innovDist > 50.0f) {
+  if (innovDist > INNOV_GATE) {
     reset(measLat, measLng);
     return;
   }
 
-  // S = H*P*H' + R, R = diag(r, r)
-  float r = 25.0f;  // ~5m GPS noise
-  float s00 = P_[0][0] + r;
+  // S = H*P*H' + R
+  float s00 = P_[0][0] + R_POS;
   float s01 = P_[0][1];
-  float s11 = P_[1][1] + r;
+  float s11 = P_[1][1] + R_POS;
   float det = s00 * s11 - s01 * s01;
-  if (fabsf(det) < 1e-9f) return;
+  if (fabsf(det) < 1e-3f) return;
 
-  // K = P*H' * inv(S), H' picks cols 0,1
+  // K = P * H' * inv(S)
   float K[4][2];
   float inv00 = s11 / det;
   float inv01 = -s01 / det;
@@ -167,28 +171,32 @@ void KalmanFilter4D::update(double measLat, double measLng) {
     K[i][1] = P_[i][0] * inv01 + P_[i][1] * inv11;
   }
 
-  // State update: x += K * innov
   for (int i = 0; i < 4; i++) {
     x_[i] += K[i][0] * innov[0] + K[i][1] * innov[1];
   }
 
-  // Covariance update: P = P - K*H*P, H*P = rows 0,1 of P
+  // P = (I - K*H) * P, using temp to avoid read-after-write on rows 0,1
+  float P_new[4][4];
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      P_[i][j] -= K[i][0] * P_[0][j] + K[i][1] * P_[1][j];
+      P_new[i][j] = P_[i][j] - (K[i][0] * P_[0][j] + K[i][1] * P_[1][j]);
     }
   }
+  memcpy(P_, P_new, sizeof(P_));
 
-  lastLat_ = measLat;
-  lastLng_ = measLng;
+  for (int i = 0; i < 4; i++) {
+    for (int j = i + 1; j < 4; j++) {
+      P_[i][j] = P_[j][i] = (P_[i][j] + P_[j][i]) * 0.5f;
+    }
+  }
 }
 
 double KalmanFilter4D::getLat() const {
-  return originLat_ + x_[1] / 111320.0;
+  return originLat_ + x_[1] / METER_PER_DEG;
 }
 
 double KalmanFilter4D::getLng() const {
-  return originLng_ + x_[0] / (111320.0 * cos(originLat_ * 0.01745329252));
+  return originLng_ + x_[0] / (METER_PER_DEG * cosOrigin_);
 }
 
 float KalmanFilter4D::speedMps() const {
@@ -318,7 +326,10 @@ void GPSCalc::process() {
       } else {
         float dt = (nowMs - lastKalmanMs) / 1000.0f;
         lastKalmanMs = nowMs;
-        if (dt > 0.01f && dt < 10.0f) kalman.predict(dt);
+        if (dt > 0.01f) {
+          if (dt > KalmanFilter4D::DT_MAX) dt = KalmanFilter4D::DT_MAX;
+          kalman.predict(dt);
+        }
         kalman.update(rawLat, rawLng);
       }
       filtLat = kalman.lat();
@@ -380,8 +391,8 @@ void GPSCalc::process() {
     lastLng = filtLng;
 
     if (now - lastTrackSaveTime > 2000 && trackPointsCount < MAX_TRACK_POINTS) {
-      trackX[trackPointsCount] = (float)((filtLng - homeLng) * 111320.0 * cos(homeLat * 0.017453));
-      trackY[trackPointsCount] = (float)((filtLat - homeLat) * 111320.0);
+      trackX[trackPointsCount] = lngToM((float)(filtLng - homeLng), cosf((float)homeLat * DEG2RAD));
+      trackY[trackPointsCount] = latToM((float)(filtLat - homeLat));
       trackPointsCount++;
       lastTrackSaveTime = now;
     }
