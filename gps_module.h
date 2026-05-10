@@ -10,6 +10,30 @@
 #define MAX_TRACK_POINTS 180
 #define PACE_WINDOW_SIZE 10
 
+// 4-state Kalman filter: east, north (m from origin), v_east, v_north (m/s)
+class KalmanFilter4D {
+public:
+  KalmanFilter4D();
+  void reset(double lat, double lng);
+  void predict(float dt);
+  void update(double measLat, double measLng);
+  bool ready() const { return ready_; }
+  double getLat() const;
+  double getLng() const;
+  double lat() const { return getLat(); }
+  double lng() const { return getLng(); }
+  float speedMps() const;
+  float courseDeg() const;
+
+private:
+  float x_[4];        // [east_m, north_m, v_east, v_north]
+  float P_[4][4];     // covariance
+  double originLat_, originLng_;
+  double lastLat_, lastLng_;
+  bool ready_;
+  uint32_t lastPredictMs_;
+};
+
 struct SatData {
   uint8_t sys;  // 0:GPS, 1:BDS, 2:GLO, 3:SBS
   uint8_t prn;
@@ -67,8 +91,11 @@ public:
   static void unlock();
 
   static double rawLat, rawLng;
+  static double filtLat, filtLng;
   static float maxSpeed;
   static int calories;
+  static KalmanFilter4D kalman;
+  static bool useKalman;
 private:
   static SemaphoreHandle_t mutex;
   static void parseGSV(const char* nmea);

@@ -43,8 +43,12 @@ int GPSCalc::sysInView[4] = { 0 };
 
 double GPSCalc::rawLat = 0;
 double GPSCalc::rawLng = 0;
+double GPSCalc::filtLat = 0;
+double GPSCalc::filtLng = 0;
 float GPSCalc::maxSpeed = 0;
 int GPSCalc::calories = 0;
+KalmanFilter4D GPSCalc::kalman;
+bool GPSCalc::useKalman = true;
 
 static TinyGPSPlus gps;
 static TinyGPSCustom satsInViewCustom(gps, "GPGSV", 3);
@@ -58,6 +62,147 @@ void GPSCalc::lock() {
 void GPSCalc::unlock() {
   if (mutex) xSemaphoreGive(mutex);
 }
+
+// ===================== KalmanFilter4D =====================
+
+static inline double latToM(double dlat) { return dlat * 111320.0; }
+static inline double lngToM(double dlng, double lat) {
+  return dlng * 111320.0 * cos(lat * 0.01745329252);
+}
+
+KalmanFilter4D::KalmanFilter4D() : ready_(false), lastPredictMs_(0) {
+  memset(x_, 0, sizeof(x_));
+  memset(P_, 0, sizeof(P_));
+}
+
+void KalmanFilter4D::reset(double lat, double lng) {
+  originLat_ = lat;
+  originLng_ = lng;
+  lastLat_ = lat;
+  lastLng_ = lng;
+  x_[0] = 0;  x_[1] = 0;  x_[2] = 0;  x_[3] = 0;
+  memset(P_, 0, sizeof(P_));
+  P_[0][0] = 25.0f;  P_[1][1] = 25.0f;   // pos variance ~5m
+  P_[2][2] = 4.0f;   P_[3][3] = 4.0f;    // vel variance ~2m/s
+  ready_ = true;
+  lastPredictMs_ = millis();
+}
+
+void KalmanFilter4D::predict(float dt) {
+  if (!ready_ || dt <= 0) return;
+
+  // State transition: pos += vel * dt
+  x_[0] += x_[2] * dt;
+  x_[1] += x_[3] * dt;
+
+  // P = F*P*F' + Q, F = [1 0 dt 0; 0 1 0 dt; 0 0 1 0; 0 0 0 1]
+  float FPF[4][4];
+  for (int i = 0; i < 4; i++) {
+    FPF[i][0] = P_[i][0] + P_[i][2] * dt;
+    FPF[i][1] = P_[i][1] + P_[i][3] * dt;
+    FPF[i][2] = P_[i][2];
+    FPF[i][3] = P_[i][3];
+  }
+  // Multiply by F' from left: P_new = F * FPF (where FPF = P * F')
+  float dt2 = dt * dt;
+  float dt3 = dt2 * dt;
+  float dt4 = dt2 * dt2;
+  float q = 0.25f;  // process noise ~0.5 m/s² acceleration
+
+  P_[0][0] = FPF[0][0] + FPF[0][2] * dt + q * dt4 / 4;
+  P_[0][1] = FPF[0][1] + FPF[0][3] * dt;
+  P_[0][2] = FPF[0][2] + q * dt3 / 2;
+  P_[0][3] = FPF[0][3];
+
+  P_[1][0] = FPF[1][0] + FPF[1][2] * dt;
+  P_[1][1] = FPF[1][1] + FPF[1][3] * dt + q * dt4 / 4;
+  P_[1][2] = FPF[1][2];
+  P_[1][3] = FPF[1][3] + q * dt3 / 2;
+
+  P_[2][0] = FPF[2][0] + q * dt3 / 2;
+  P_[2][1] = FPF[2][1];
+  P_[2][2] = FPF[2][2] + q * dt2;
+  P_[2][3] = FPF[2][3];
+
+  P_[3][0] = FPF[3][0];
+  P_[3][1] = FPF[3][1] + q * dt3 / 2;
+  P_[3][2] = FPF[3][2];
+  P_[3][3] = FPF[3][3] + q * dt2;
+}
+
+void KalmanFilter4D::update(double measLat, double measLng) {
+  if (!ready_) return;
+
+  // Convert measurement to local meters
+  double zx = lngToM(measLng - originLng_, originLat_);
+  double zy = latToM(measLat - originLat_);
+
+  // Innovation: y = z - H*x, H = [1 0 0 0; 0 1 0 0]
+  float innov[2];
+  innov[0] = (float)(zx - x_[0]);
+  innov[1] = (float)(zy - x_[1]);
+
+  // Innovation check: if jump > 50m, reset filter
+  float innovDist = sqrtf(innov[0] * innov[0] + innov[1] * innov[1]);
+  if (innovDist > 50.0f) {
+    reset(measLat, measLng);
+    return;
+  }
+
+  // S = H*P*H' + R, R = diag(r, r)
+  float r = 25.0f;  // ~5m GPS noise
+  float s00 = P_[0][0] + r;
+  float s01 = P_[0][1];
+  float s11 = P_[1][1] + r;
+  float det = s00 * s11 - s01 * s01;
+  if (fabsf(det) < 1e-9f) return;
+
+  // K = P*H' * inv(S), H' picks cols 0,1
+  float K[4][2];
+  float inv00 = s11 / det;
+  float inv01 = -s01 / det;
+  float inv11 = s00 / det;
+  for (int i = 0; i < 4; i++) {
+    K[i][0] = P_[i][0] * inv00 + P_[i][1] * inv01;
+    K[i][1] = P_[i][0] * inv01 + P_[i][1] * inv11;
+  }
+
+  // State update: x += K * innov
+  for (int i = 0; i < 4; i++) {
+    x_[i] += K[i][0] * innov[0] + K[i][1] * innov[1];
+  }
+
+  // Covariance update: P = P - K*H*P, H*P = rows 0,1 of P
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      P_[i][j] -= K[i][0] * P_[0][j] + K[i][1] * P_[1][j];
+    }
+  }
+
+  lastLat_ = measLat;
+  lastLng_ = measLng;
+}
+
+double KalmanFilter4D::getLat() const {
+  return originLat_ + x_[1] / 111320.0;
+}
+
+double KalmanFilter4D::getLng() const {
+  return originLng_ + x_[0] / (111320.0 * cos(originLat_ * 0.01745329252));
+}
+
+float KalmanFilter4D::speedMps() const {
+  return sqrtf(x_[2] * x_[2] + x_[3] * x_[3]);
+}
+
+float KalmanFilter4D::courseDeg() const {
+  if (fabsf(x_[2]) < 0.01f && fabsf(x_[3]) < 0.01f) return 0;
+  float deg = atan2f(x_[2], x_[3]) * 57.2957795f;
+  if (deg < 0) deg += 360;
+  return deg;
+}
+
+// ===================== GPSCalc =====================
 
 void GPSCalc::init() {
   mutex = xSemaphoreCreateMutex();
@@ -78,6 +223,7 @@ void GPSCalc::startRun() {
   durationSec = 0;
   maxSpeed = 0;
   calories = 0;
+  kalman = KalmanFilter4D();
   runStartTime = millis();
   lastLapTime = millis();
   for (int i = 0; i < PACE_WINDOW_SIZE; i++) paceBuffer[i] = 0;
@@ -162,14 +308,31 @@ void GPSCalc::process() {
     altitude = gps.altitude.meters();
     course = gps.course.deg();
     currentSpeed = gps.speed.kmph();
+
+    if (useKalman) {
+      static uint32_t lastKalmanMs = 0;
+      uint32_t nowMs = millis();
+      if (!kalman.ready()) {
+        kalman.reset(rawLat, rawLng);
+        lastKalmanMs = nowMs;
+      } else {
+        float dt = (nowMs - lastKalmanMs) / 1000.0f;
+        lastKalmanMs = nowMs;
+        if (dt > 0.01f && dt < 10.0f) kalman.predict(dt);
+        kalman.update(rawLat, rawLng);
+      }
+      filtLat = kalman.lat();
+      filtLng = kalman.lng();
+    } else {
+      filtLat = rawLat;
+      filtLng = rawLng;
+    }
   }
 
   if (!isRunning || !gps.location.isValid() || gps.location.age() > 2000) { unlock(); return; }
 
   uint32_t now = millis();
   durationSec = (now - runStartTime) / 1000;
-  double lat = gps.location.lat();
-  double lng = gps.location.lng();
 
   if (now - lastPaceUpdate >= 1000) {
     float distThisSec = totalDistance - lastDistForPace;
@@ -200,31 +363,31 @@ void GPSCalc::process() {
   if (!homeSet) {
     if (satellites > 4 && gps.hdop.hdop() < 2.5) {
       homeSet = true;
-      homeLat = lat;
-      homeLng = lng;
-      lastLat = lat;
-      lastLng = lng;
+      homeLat = filtLat;
+      homeLng = filtLng;
+      lastLat = filtLat;
+      lastLng = filtLng;
       lastLapTime = now;
       if (laps < MAX_LAPS) lapHistory[laps].trackStartIdx = trackPointsCount;
     }
     unlock(); return;
   }
 
-  float d = calcDist(lat, lng, lastLat, lastLng);
+  float d = calcDist(filtLat, filtLng, lastLat, lastLng);
   if (d >= 2.0f && d < 35.0f) {
     totalDistance += d;
-    lastLat = lat;
-    lastLng = lng;
+    lastLat = filtLat;
+    lastLng = filtLng;
 
     if (now - lastTrackSaveTime > 2000 && trackPointsCount < MAX_TRACK_POINTS) {
-      trackX[trackPointsCount] = (float)((lng - homeLng) * 111320.0 * cos(homeLat * 0.017453));
-      trackY[trackPointsCount] = (float)((lat - homeLat) * 111320.0);
+      trackX[trackPointsCount] = (float)((filtLng - homeLng) * 111320.0 * cos(homeLat * 0.017453));
+      trackY[trackPointsCount] = (float)((filtLat - homeLat) * 111320.0);
       trackPointsCount++;
       lastTrackSaveTime = now;
     }
   }
 
-  float distToHome = calcDist(lat, lng, homeLat, homeLng);
+  float distToHome = calcDist(filtLat, filtLng, homeLat, homeLng);
   // 回到起点 15 米内，且本圈已经跑了至少 200 米
   if (distToHome < 15.0f && (totalDistance - distanceAtLastLap) > 200.0f) {
     if (laps < MAX_LAPS) {

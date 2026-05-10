@@ -40,9 +40,15 @@ void drawDevPage(Canvas& cv) {
   cv.setCursor(0, 20);
   cv.print("Lat: ");
   cv.print(GPSCalc::rawLat, 6);
+  cv.setCursor(64, 20);
+  cv.print("f:");
+  cv.print(GPSCalc::filtLat, 6);
   cv.setCursor(0, 30);
   cv.print("Lng: ");
   cv.print(GPSCalc::rawLng, 6);
+  cv.setCursor(64, 30);
+  cv.print("f:");
+  cv.print(GPSCalc::filtLng, 6);
   cv.setCursor(0, 40);
   cv.print("Height: ");
   cv.print(GPSCalc::altitude);
