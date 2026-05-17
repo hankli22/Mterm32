@@ -20,7 +20,6 @@ int MenuManager::devScroll = 0;
 int MenuManager::usbBridgeBaudIdx = 0;
 unsigned long MenuManager::usbBridgeBytesRx = 0;
 unsigned long MenuManager::usbBridgeBytesTx = 0;
-bool MenuManager::usbBridgeActive = false;
 
 uint32_t MenuManager::lastActiveTime = 0;
 bool MenuManager::isScreenOff = false;
@@ -207,9 +206,7 @@ void MenuManager::handleInput() {
           usbBridgeBaudIdx = 0;
           usbBridgeBytesRx = 0;
           usbBridgeBytesTx = 0;
-          usbBridgeActive = true;
-          Serial1.end();
-          Serial1.begin(9600, SERIAL_8N1, 17, 18);
+          GPSCalc::setUsbBridge(true, 9600);
         }
       }
       if (devMenuIdx < devScroll) devScroll = devMenuIdx;
@@ -221,9 +218,7 @@ void MenuManager::handleInput() {
     case PAGE_USB_BRIDGE:
       if (evt == BTN_LEFT_PRESSED) {
         if (currentPage == PAGE_USB_BRIDGE) {
-          usbBridgeActive = false;
-          Serial1.end();
-          Serial1.begin(9600, SERIAL_8N1, 17, 18);
+          GPSCalc::setUsbBridge(false);
         }
         currentPage = PAGE_DEV_MENU;
       }
@@ -237,8 +232,7 @@ void MenuManager::handleInput() {
             if (usbBridgeBaudIdx < 0) usbBridgeBaudIdx = 4;
           }
           const int bauds[] = { 9600, 19200, 38400, 57600, 115200 };
-          Serial1.end();
-          Serial1.begin(bauds[usbBridgeBaudIdx], SERIAL_8N1, 17, 18);
+          GPSCalc::setUsbBridge(true, bauds[usbBridgeBaudIdx]);
         }
       }
       break;

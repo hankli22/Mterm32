@@ -67,6 +67,9 @@ public:
   static void lock();
   static void unlock();
 
+  static bool usbBridgeActive;       // true = USB bridge mode (skip GPS parsing)
+  static void setUsbBridge(bool on, int baud = 9600);
+
   static double rawLat, rawLng;
   static double filtLat, filtLng;
   static float maxSpeed;

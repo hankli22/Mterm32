@@ -1,6 +1,5 @@
 #include "svc/gps.h"
 #include "svc/config.h"
-#include "app/menu.h"
 #include "board/board.h"
 
 bool GPSCalc::isRunning = false;
@@ -49,6 +48,7 @@ float GPSCalc::maxSpeed = 0;
 int GPSCalc::calories = 0;
 KalmanFilter4D GPSCalc::kalman;
 bool GPSCalc::useKalman = true;
+bool GPSCalc::usbBridgeActive = false;
 
 static TinyGPSPlus gps;
 static TinyGPSCustom satsInViewCustom(gps, "GPGSV", 3);
@@ -61,6 +61,12 @@ void GPSCalc::lock() {
 
 void GPSCalc::unlock() {
   if (mutex) xSemaphoreGive(mutex);
+}
+
+void GPSCalc::setUsbBridge(bool on, int baud) {
+  usbBridgeActive = on;
+  Serial1.end();
+  Serial1.begin(baud, SERIAL_8N1, RX_GPS, TX_GPS);
 }
 
 // ===================== GPSCalc =====================
@@ -132,7 +138,7 @@ void GPSCalc::process() {
   static char nmeaBuf[128];
   static int nmeaPos = 0;
 
-  if (!MenuManager::usbBridgeActive) {
+  if (!usbBridgeActive) {
     while (Serial1.available() > 0) {
       char c = Serial1.read();
       gps.encode(c);
