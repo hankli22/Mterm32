@@ -1,6 +1,6 @@
 #include "pages.h"
 #include "ui.h"
-#include "hardwareLayer.h"
+#include "drv/power.h"
 #include "gps_module.h"
 #include "config.h"
 
@@ -16,7 +16,7 @@ void drawStartMenu(Canvas& cv) {
     cv.drawStr(40, 10, dots[frame]);
   }
 
-  int pct = HAL::getBatteryPercent();
+  int pct = Power::getBatteryPercent();
   cv.drawFrame(93, 2, 18, 8);
   cv.drawBox(111, 4, 2, 4);
   int fillW = (pct * 14) / 100;

@@ -1,5 +1,7 @@
 #include <Arduino.h>
-#include "hardwareLayer.h"
+#include "drv/display.h"
+#include "drv/buttons.h"
+#include "drv/power.h"
 #include "gps_module.h"
 #include "ui.h"
 #include "config.h"
@@ -12,7 +14,7 @@ TaskHandle_t logicTaskHandle;
 void uiTask(void* pvParameters) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
   for (;;) {
-    HAL::updateButtons();
+    Buttons::update();
     MenuManager::handleInput();
     MenuManager::update();
     vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(16));
@@ -28,9 +30,11 @@ void logicTask(void* pvParameters) {
 
 void setup() {
   Serial.begin(115200);
-  Serial.setRxBufferSize(1024);  // 电脑发过来的指令缓冲区
+  Serial.setRxBufferSize(1024);
   loadConfig();
-  HAL::init();
+  Power::init();
+  Display::init();
+  Buttons::init();
   GPSCalc::init();
 
   xTaskCreatePinnedToCore(uiTask, "UI", 8192, NULL, 1, &uiTaskHandle, 0);

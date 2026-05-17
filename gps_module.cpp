@@ -1,7 +1,7 @@
 #include "gps_module.h"
 #include "config.h"
 #include "ui.h"
-#include "hardwareLayer.h"
+#include "board/board.h"
 
 bool GPSCalc::isRunning = false;
 float GPSCalc::totalDistance = 0;

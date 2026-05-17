@@ -1,5 +1,7 @@
 #include "ui.h"
-#include "hardwareLayer.h"
+#include "drv/display.h"
+#include "drv/buttons.h"
+#include "drv/power.h"
 #include "gps_module.h"
 #include "config.h"
 #include "lib/canvas.h"
@@ -39,12 +41,12 @@ float MenuManager::smoothLerp(float current, float target, float speed) {
 }
 
 void MenuManager::handleInput() {
-  BtnEvent evt = HAL::getEvent();
+  BtnEvent evt = Buttons::getEvent();
 
   if (evt != BTN_NONE) {
     if (isScreenOff) {
       isScreenOff = false;
-      HAL::getDisplay()->setPowerSave(0);
+      Display::setPowerSave(0);
       lastActiveTime = millis();
       return;
     }
@@ -106,7 +108,7 @@ void MenuManager::handleInput() {
             saveConfig();
             currentPage = PAGE_START;
           }
-          else if (setIdx == 10) { HAL::sleepDevice(); }
+          else if (setIdx == 10) { Power::sleepDevice(); }
           else if (setIdx == 11) {
             currentPage = PAGE_DEV_MENU;
             devMenuIdx = 0;
@@ -163,13 +165,13 @@ void MenuManager::handleInput() {
               sysCfg.contrast--;
               if (sysCfg.contrast < 1) sysCfg.contrast = 5;
             }
-            HAL::getDisplay()->setContrast(sysCfg.contrast * 51);
+            Display::setContrast(sysCfg.contrast * 51);
           } else if (setIdx == 8) sysCfg.auto_sleep = !sysCfg.auto_sleep;
         }
 
         if (evt == BTN_LEFT_PRESSED) {
           sysCfg = tempCfg;
-          HAL::getDisplay()->setContrast(sysCfg.contrast * 51);
+          Display::setContrast(sysCfg.contrast * 51);
           isEditing = false;
         }
         if (evt == BTN_RIGHT_PRESSED) {
@@ -292,7 +294,7 @@ void MenuManager::handleInput() {
     case PAGE_SUMMARY:
       if (evt == BTN_LEFT_PRESSED) {
         if (sysCfg.screen_off == 0) currentPage = PAGE_START;
-        else HAL::sleepDevice();
+        else Power::sleepDevice();
       }
       if (evt == BTN_UP_PRESSED) {
         viewLapIdx--;
@@ -309,25 +311,25 @@ void MenuManager::handleInput() {
 void MenuManager::update() {
   static bool contrastInit = false;
   if (!contrastInit) {
-    HAL::getDisplay()->setContrast(sysCfg.contrast * 51);
+    Display::setContrast(sysCfg.contrast * 51);
     lastActiveTime = millis();
     contrastInit = true;
   }
 
   if (sysCfg.auto_sleep && millis() - lastActiveTime > 300000UL) {
-    HAL::sleepDevice();
+    Power::sleepDevice();
   }
 
   if (sysCfg.screen_off > 0 && !isScreenOff) {
     if (millis() - lastActiveTime > sysCfg.screen_off * 1000UL) {
       isScreenOff = true;
-      HAL::getDisplay()->setPowerSave(1);
+      Display::setPowerSave(1);
     }
   }
   if (isScreenOff) return;
 
   GPSCalc::lock();
-  auto u8g2 = HAL::getDisplay();
+  auto u8g2 = Display::get();
   u8g2->clearBuffer();
 
   // Update sliding animations
