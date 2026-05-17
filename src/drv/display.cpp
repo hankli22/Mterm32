@@ -58,7 +58,7 @@ void Display::init() {
     busCfg.sclk_io_num = 23;
     busCfg.quadwp_io_num = -1;
     busCfg.quadhd_io_num = -1;
-    spi_bus_initialize(SPI2_HOST, &busCfg, SPI_DMA_DISABLED);
+    spi_bus_initialize(SPI2_HOST, &busCfg, SPI_DMA_CH_AUTO);
 
     spi_device_interface_config_t devCfg = {};
     devCfg.clock_speed_hz = 40000000;
