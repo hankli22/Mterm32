@@ -15,7 +15,7 @@ void Power::init() {
     outCfg.pin_bit_mask = (1ULL << GPS_PWR_MOSFET) | (1ULL << OLED_PWR) | (1ULL << OLED_RST);
     gpio_config(&outCfg);
 
-    gpio_set_level(GPIO_NUM_20, 0);  // GPS_PWR_MOSFET low
+    gpio_set_level(GPIO_NUM_20, 1);  // GPS_PWR_MOSFET high (GPS on)
     gpio_set_level(GPIO_NUM_19, 0);  // OLED_PWR low
     gpio_set_level(GPIO_NUM_15, 0);  // OLED_RST low
     vTaskDelay(pdMS_TO_TICKS(50));
@@ -68,7 +68,7 @@ void Power::sleepDevice() {
 
     gpio_set_level(GPIO_NUM_19, 0);  // OLED_PWR off
     gpio_set_level(GPIO_NUM_15, 0);  // OLED_RST low
-    gpio_set_level(GPIO_NUM_20, 1);  // GPS_PWR_MOSFET high (cut GPS power in sleep)
+    gpio_set_level(GPIO_NUM_20, 0);  // GPS_PWR_MOSFET low (cut GPS power in sleep)
 
     const uint8_t wakeBtns[] = { BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT };
     uint64_t mask = 0;
