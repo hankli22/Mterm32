@@ -4,3 +4,6 @@ project_context_for_ai.txt
 __pycache__/
 *.pyc
 .claude/
+.pio/
+.pioenvs/
+.piolibdeps/
