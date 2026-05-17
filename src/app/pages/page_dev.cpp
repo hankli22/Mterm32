@@ -1,7 +1,6 @@
 #include "app/pages.h"
 #include "app/menu.h"
 #include "svc/gps.h"
-#include <Arduino.h>
 
 void drawDevMenu(Canvas& cv) {
   cv.setFont(u8g2_font_6x10_tf);

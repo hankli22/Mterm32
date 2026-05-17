@@ -28,7 +28,7 @@ void drawStartMenu(Canvas& cv) {
 
   cv.setFont(u8g2_font_6x10_tf);
   cv.setCursor(0, 25);
-  cv.print(GPSCalc::getDateTime().c_str());
+  cv.print(GPSCalc::getDateTime());
 
   if (MenuManager::isCursorVisible) cv.drawStr(0, (int)MenuManager::currentCursorY, ">");
   else {

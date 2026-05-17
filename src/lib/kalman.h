@@ -2,6 +2,13 @@
 #define KALMAN_H
 
 #include <stdint.h>
+#include <math.h>
+
+static constexpr float DEG2RAD       = 0.01745329252f;
+static constexpr float METER_PER_DEG = 111320.0f;
+
+inline float latToM(float dlat)              { return dlat * METER_PER_DEG; }
+inline float lngToM(float dlng, float cosLat) { return dlng * METER_PER_DEG * cosLat; }
 
 // 4-state Kalman filter: east, north (m from origin), v_east, v_north (m/s)
 class KalmanFilter4D {

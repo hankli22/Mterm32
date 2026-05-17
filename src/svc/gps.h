@@ -1,11 +1,14 @@
 #ifndef GPSMODULE_H
 #define GPSMODULE_H
 
-#include <Arduino.h>
-#include <TinyGPS++.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
+#include <stdint.h>
+#include "ext/TinyGPS/TinyGPS++.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "lib/kalman.h"
+#include "compat/uart_hal.h"
+
+extern UartHal gpsUart;
 
 #define MAX_LAPS 10
 #define MAX_TRACK_POINTS 180
@@ -33,7 +36,7 @@ public:
   static void process();
   static void startRun();
   static void stopRun();
-  static String getDateTime();
+  static const char* getDateTime();
 
   static bool isRunning;
   static float totalDistance;

@@ -2,12 +2,6 @@
 #include <math.h>
 #include <string.h>
 
-static constexpr float DEG2RAD = 0.01745329252f;
-static constexpr float METER_PER_DEG = 111320.0f;
-
-static inline float latToM(float dlat) { return dlat * METER_PER_DEG; }
-static inline float lngToM(float dlng, float cosLat) { return dlng * METER_PER_DEG * cosLat; }
-
 KalmanFilter4D::KalmanFilter4D() : ready_(false) {
   memset(x_, 0, sizeof(x_));
   memset(P_, 0, sizeof(P_));

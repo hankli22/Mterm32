@@ -1,6 +1,12 @@
 #include "svc/gps.h"
 #include "svc/config.h"
 #include "board/board.h"
+#include "compat/compat.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+UartHal gpsUart;
 
 bool GPSCalc::isRunning = false;
 float GPSCalc::totalDistance = 0;
@@ -65,19 +71,17 @@ void GPSCalc::unlock() {
 
 void GPSCalc::setUsbBridge(bool on, int baud) {
   usbBridgeActive = on;
-  Serial1.end();
-  Serial1.begin(baud, SERIAL_8N1, RX_GPS, TX_GPS);
+  gpsUart.end();
+  gpsUart.begin(baud, UART_CFG_8N1, RX_GPS, TX_GPS);
 }
-
-// ===================== GPSCalc =====================
 
 void GPSCalc::init() {
   mutex = xSemaphoreCreateMutex();
-  Serial1.begin(9600, SERIAL_8N1, RX_GPS, TX_GPS);
-  Serial1.setRxBufferSize(1024);
-  if (sysCfg.record_freq >= 5.0) Serial1.println("$PCAS02,200*1D");
-  else if (sysCfg.record_freq >= 2.0) Serial1.println("$PCAS02,500*1A");
-  else Serial1.println("$PCAS02,1000*2E");
+  gpsUart.begin(9600, UART_CFG_8N1, RX_GPS, TX_GPS);
+  gpsUart.setRxBufferSize(1024);
+  if (sysCfg.record_freq >= 5.0) gpsUart.println("$PCAS02,200*1D");
+  else if (sysCfg.record_freq >= 2.0) gpsUart.println("$PCAS02,500*1A");
+  else gpsUart.println("$PCAS02,1000*2E");
 }
 
 void GPSCalc::startRun() {
@@ -109,29 +113,28 @@ static float calcDist(double lat1, double lng1, double lat2, double lng2) {
   return (float)TinyGPSPlus::distanceBetween(lat1, lng1, lat2, lng2);
 }
 
-String GPSCalc::getDateTime() {
+const char* GPSCalc::getDateTime() {
+  static char buf[32];
   if (!gps.time.isValid() || gps.date.year() < 2020) {
     if (gps.time.isValid()) {
-      char tBuf[32];
       int h = (gps.time.hour() + 8) % 24;
-      sprintf(tBuf, "TIME: %02d:%02d:%02d", h, (int)gps.time.minute(), (int)gps.time.second());
-      return String(tBuf);
+      snprintf(buf, sizeof(buf), "TIME: %02d:%02d:%02d",
+               h, (int)gps.time.minute(), (int)gps.time.second());
+      return buf;
     }
     return "WAITING SATELLITES";
   }
-  char timeBuf[32];
   int localHour = gps.time.hour() + 8;
   int localDay = gps.date.day();
   if (localHour >= 24) {
     localHour -= 24;
     localDay += 1;
   }
-  sprintf(timeBuf, "%02d/%02d/%02d %02d:%02d:%02d",
-          (int)(gps.date.year() % 100), (int)gps.date.month(), (int)localDay,
-          (int)localHour, (int)gps.time.minute(), (int)gps.time.second());
-  return String(timeBuf);
+  snprintf(buf, sizeof(buf), "%02d/%02d/%02d %02d:%02d:%02d",
+           (int)(gps.date.year() % 100), (int)gps.date.month(), localDay,
+           (int)localHour, (int)gps.time.minute(), (int)gps.time.second());
+  return buf;
 }
-
 
 void GPSCalc::process() {
   lock();
@@ -139,8 +142,8 @@ void GPSCalc::process() {
   static int nmeaPos = 0;
 
   if (!usbBridgeActive) {
-    while (Serial1.available() > 0) {
-      char c = Serial1.read();
+    while (gpsUart.available() > 0) {
+      char c = (char)gpsUart.read();
       gps.encode(c);
 
       if (c == '$') {
@@ -258,7 +261,6 @@ void GPSCalc::process() {
   }
 
   float distToHome = calcDist(filtLat, filtLng, homeLat, homeLng);
-  // 回到起点 15 米内，且本圈已经跑了至少 200 米
   if (distToHome < 15.0f && (totalDistance - distanceAtLastLap) > 200.0f) {
     if (laps < MAX_LAPS) {
       lapHistory[laps].timeSec = (now - lastLapTime) / 1000;
@@ -281,11 +283,11 @@ void GPSCalc::parseGSV(const char* nmea) {
   int len = strlen(nmea);
   if (len < 6 || strncmp(nmea + 3, "GSV", 3) != 0) return;
 
-  uint8_t sys = 3;                                     // 默认 SBS/其他
-  if (nmea[1] == 'G' && nmea[2] == 'P') sys = 0;       // GPS
-  else if (nmea[1] == 'B' && nmea[2] == 'D') sys = 1;  // 北斗 BDS
-  else if (nmea[1] == 'G' && nmea[2] == 'B') sys = 1;  // 北斗兼容名
-  else if (nmea[1] == 'G' && nmea[2] == 'L') sys = 2;  // GLONASS
+  uint8_t sys = 3;
+  if (nmea[1] == 'G' && nmea[2] == 'P') sys = 0;
+  else if (nmea[1] == 'B' && nmea[2] == 'D') sys = 1;
+  else if (nmea[1] == 'G' && nmea[2] == 'B') sys = 1;
+  else if (nmea[1] == 'G' && nmea[2] == 'L') sys = 2;
 
   int toks[20];
   int tCnt = 0;
@@ -300,7 +302,6 @@ void GPSCalc::parseGSV(const char* nmea) {
   if (tCnt < 4) return;
   sysInView[sys] = atoi(nmea + toks[3]);
 
-  // 解析每颗卫星 PRN, ELE, AZI, SNR
   for (int i = 4; i + 3 < tCnt; i += 4) {
     int prn = atoi(nmea + toks[i]);
     if (prn == 0) continue;
@@ -311,8 +312,7 @@ void GPSCalc::parseGSV(const char* nmea) {
     int idx = -1;
     for (int j = 0; j < satCount; j++) {
       if (sats[j].sys == sys && sats[j].prn == prn) {
-        idx = j;
-        break;
+        idx = j; break;
       }
     }
     if (idx == -1 && satCount < 40) idx = satCount++;
@@ -340,7 +340,6 @@ void GPSCalc::cleanupSats() {
     if (sats[i].snr > 15) sysTracked[sats[i].sys]++;
   }
 }
-
 
 bool GPSCalc::isGpsReady() {
   return gps.charsProcessed() > 0;

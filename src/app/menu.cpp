@@ -6,6 +6,10 @@
 #include "svc/config.h"
 #include "lib/canvas.h"
 #include "app/pages.h"
+#include "compat/compat.h"
+#include "compat/uart_hal.h"
+
+static UsbCdc pcSerial;
 
 PageState MenuManager::currentPage = PAGE_SPLASH;
 int MenuManager::cursorIndex = 0;
@@ -113,7 +117,7 @@ void MenuManager::handleInput() {
             devMenuIdx = 0;
           }
           else if (setIdx == 12) {
-            Serial1.println("$PCAS04,1*18");
+            gpsUart.println("$PCAS04,1*18");
             currentPage = PAGE_START;
           }
           else if (setIdx == 13) {
@@ -175,9 +179,9 @@ void MenuManager::handleInput() {
         }
         if (evt == BTN_RIGHT_PRESSED) {
           if (setIdx == 1) {
-            if (sysCfg.record_freq >= 5.0) Serial1.println("$PCAS02,200*1D");
-            else if (sysCfg.record_freq >= 2.0) Serial1.println("$PCAS02,500*1A");
-            else Serial1.println("$PCAS02,1000*2E");
+            if (sysCfg.record_freq >= 5.0) gpsUart.println("$PCAS02,200*1D");
+            else if (sysCfg.record_freq >= 2.0) gpsUart.println("$PCAS02,500*1A");
+            else gpsUart.println("$PCAS02,1000*2E");
           }
           isEditing = false;
         }
@@ -324,7 +328,7 @@ void MenuManager::update() {
 
   GPSCalc::lock();
   auto u8g2 = Display::get();
-  u8g2->clearBuffer();
+  u8g2_ClearBuffer(u8g2);
 
   // Update sliding animations
   currentCursorY = smoothLerp(currentCursorY, 45 + cursorIndex * 15, 0.3f);
@@ -373,17 +377,17 @@ void MenuManager::update() {
     }
   }
 
-  // USB Bridge: pump data between USB CDC (Serial) and hardware UART (Serial1)
+  // USB Bridge: pump data between USB CDC (pcSerial) and hardware UART (gpsUart)
   if (currentPage == PAGE_USB_BRIDGE) {
     int n = 256;
-    while (Serial1.available() && --n > 0) {
-      Serial.write(Serial1.read());
+    while (gpsUart.available() && --n > 0) {
+      pcSerial.write((uint8_t)gpsUart.read());
       usbBridgeBytesRx++;
     }
     n = 256;
-    while (Serial.available() && --n > 0) {
-      if (Serial1.availableForWrite() > 0) {
-        Serial1.write(Serial.read());
+    while (pcSerial.available() && --n > 0) {
+      if (gpsUart.availableForWrite() > 0) {
+        gpsUart.write((uint8_t)pcSerial.read());
         usbBridgeBytesTx++;
       } else {
         break;
@@ -392,5 +396,5 @@ void MenuManager::update() {
   }
 
   GPSCalc::unlock();
-  u8g2->sendBuffer();
+  u8g2_SendBuffer(u8g2);
 }
