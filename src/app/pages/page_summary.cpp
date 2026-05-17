@@ -173,7 +173,7 @@ void drawFullMapHUD(Canvas& cv) {
     cv.drawLine(barX + barW, barY - 3, barX + barW, barY + 1);
 
     cv.setFont(u8g2_font_4x6_tf);
-    char buf[10];
+    char buf[16];
     if (chosen >= 1000) snprintf(buf, sizeof(buf), "%d.%dkm", chosen / 1000, (chosen % 1000) / 100);
     else snprintf(buf, sizeof(buf), "%dm", chosen);
     cv.drawStr(barX + 2, barY - 4, buf);
@@ -203,7 +203,7 @@ void drawFullMapHUD(Canvas& cv) {
   cv.setFont(u8g2_font_5x7_tf);
   int min = GPSCalc::durationSec / 60;
   int sec = GPSCalc::durationSec % 60;
-  char tBuf[8];
+  char tBuf[16];
   snprintf(tBuf, sizeof(tBuf), "%02d:%02d", min, sec);
   cv.drawStr(W - 36, 9, tBuf);
 

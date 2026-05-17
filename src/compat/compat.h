@@ -29,6 +29,9 @@ inline uint32_t millis() {
 #define sq(x)        ((x) * (x))
 
 inline char* dtostrf(double val, int width, int prec, char* buf) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
     snprintf(buf, (size_t)(width + 2), "%.*f", prec, val);
+#pragma GCC diagnostic pop
     return buf;
 }
