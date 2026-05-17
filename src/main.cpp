@@ -8,6 +8,7 @@
 #include "svc/config.h"
 #include "app/menu.h"
 #include "compat/uart_hal.h"
+#include "driver/gpio.h"
 
 static UsbCdc pcSerial;
 
@@ -32,6 +33,14 @@ static void logicTask(void* pvParameters) {
 }
 
 extern "C" void app_main() {
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // TEST: Toggle OLED_PWR (GPIO 19) to verify app_main() runs.
+    // REMOVE after confirming program reaches this point.
+    // If OLED powers on immediately after reset, app_main IS entered.
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_19, 1);
+
     nvs_flash_init();
     pcSerial.begin(115200);
 
