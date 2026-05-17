@@ -1,5 +1,5 @@
-#include "gps_module.h"
-#include "config.h"
+#include "svc/gps.h"
+#include "svc/config.h"
 #include "ui.h"
 #include "board/board.h"
 

@@ -2,9 +2,9 @@
 #include "drv/display.h"
 #include "drv/buttons.h"
 #include "drv/power.h"
-#include "gps_module.h"
+#include "svc/gps.h"
 #include "ui.h"
-#include "config.h"
+#include "svc/config.h"
 #pragma GCC optimize("O2")
 
 

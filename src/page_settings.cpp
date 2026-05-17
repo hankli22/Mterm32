@@ -1,6 +1,6 @@
 #include "pages.h"
 #include "ui.h"
-#include "config.h"
+#include "svc/config.h"
 #include <stdio.h>
 
 void drawSettings(Canvas& cv) {

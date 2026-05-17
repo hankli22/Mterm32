@@ -1,6 +1,6 @@
 #include "pages.h"
 #include "ui.h"
-#include "gps_module.h"
+#include "svc/gps.h"
 #include <Arduino.h>
 
 void drawDevMenu(Canvas& cv) {

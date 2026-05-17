@@ -1,8 +1,8 @@
 #include "pages.h"
 #include "ui.h"
 #include "drv/power.h"
-#include "gps_module.h"
-#include "config.h"
+#include "svc/gps.h"
+#include "svc/config.h"
 
 void drawStartMenu(Canvas& cv) {
   cv.setFont(u8g2_font_6x10_tf);

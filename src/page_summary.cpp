@@ -1,7 +1,7 @@
 #include "pages.h"
 #include "ui.h"
-#include "gps_module.h"
-#include "config.h"
+#include "svc/gps.h"
+#include "svc/config.h"
 
 void drawTrackMap(Canvas& cv, int ox, int oy, int lapIdx) {
   int start = 0;

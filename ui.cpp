@@ -2,8 +2,8 @@
 #include "drv/display.h"
 #include "drv/buttons.h"
 #include "drv/power.h"
-#include "gps_module.h"
-#include "config.h"
+#include "svc/gps.h"
+#include "svc/config.h"
 #include "lib/canvas.h"
 #include "src/pages.h"
 

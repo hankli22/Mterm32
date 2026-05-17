@@ -1,7 +1,7 @@
 #include "pages.h"
 #include "ui.h"
-#include "gps_module.h"
-#include "config.h"
+#include "svc/gps.h"
+#include "svc/config.h"
 #include "lib/trig_lut.h"
 #include <stdio.h>
 

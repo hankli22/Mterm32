@@ -1,4 +1,4 @@
-#include "config.h"
+#include "svc/config.h"
 #include <Preferences.h>
 
 SystemConfig sysCfg;

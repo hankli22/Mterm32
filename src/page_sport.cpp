@@ -1,6 +1,6 @@
 #include "pages.h"
-#include "gps_module.h"
-#include "config.h"
+#include "svc/gps.h"
+#include "svc/config.h"
 
 void drawSport1(Canvas& cv) {
   if (GPSCalc::satellites < 4) {
