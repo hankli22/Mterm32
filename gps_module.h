@@ -5,40 +5,11 @@
 #include <TinyGPS++.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
+#include "lib/kalman.h"
 
 #define MAX_LAPS 10
 #define MAX_TRACK_POINTS 180
 #define PACE_WINDOW_SIZE 10
-
-// 4-state Kalman filter: east, north (m from origin), v_east, v_north (m/s)
-class KalmanFilter4D {
-public:
-  KalmanFilter4D();
-
-  // Tunable constants
-  static constexpr float Q_ACCEL = 0.25f;    // process noise (m/s²)²
-  static constexpr float R_POS   = 25.0f;    // measurement noise m²
-  static constexpr float INNOV_GATE = 50.0f; // reset on innovation > N meters
-  static constexpr float DT_MAX  = 2.0f;     // cap dt to prevent Q*dt⁴ blowup
-
-  void reset(double lat, double lng);
-  void predict(float dt);
-  void update(double measLat, double measLng);
-  bool ready() const { return ready_; }
-  double getLat() const;
-  double getLng() const;
-  double lat() const { return getLat(); }
-  double lng() const { return getLng(); }
-  float speedMps() const;
-  float courseDeg() const;
-
-private:
-  float x_[4];         // [east_m, north_m, v_east, v_north]
-  float P_[4][4];      // covariance
-  float originLat_, originLng_;
-  float cosOrigin_;    // cached cos(originLat_ * DEG2RAD)
-  bool ready_;
-};
 
 struct SatData {
   uint8_t sys;  // 0:GPS, 1:BDS, 2:GLO, 3:SBS

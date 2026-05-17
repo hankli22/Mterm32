@@ -9,7 +9,10 @@
       "Bash(git status *)",
       "Bash(git restore *)",
       "Bash(git mv *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\Documents\\\\Arduino\\\\Mterm32\" -Depth 1)",
+      "Bash(Select-Object Mode, Name)",
+      "PowerShell(git *)"
     ]
   }
 }
