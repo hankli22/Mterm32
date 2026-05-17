@@ -1,6 +1,7 @@
 #include "app/pages.h"
 #include "app/menu.h"
 #include "svc/gps.h"
+#include "esp_system.h"
 
 void drawDevMenu(Canvas& cv) {
   cv.setFont(u8g2_font_6x10_tf);
@@ -67,11 +68,11 @@ void drawDevStat(Canvas& cv) {
   cv.print("--- DEV STAT ---");
   cv.setCursor(2, 28);
   cv.print("Heap: ");
-  cv.print(ESP.getFreeHeap() / 1024);
+  cv.print(esp_get_free_heap_size() / 1024);
   cv.print(" KB");
   cv.setCursor(2, 40);
   cv.print("Min Heap: ");
-  cv.print(ESP.getMinFreeHeap() / 1024);
+  cv.print(esp_get_minimum_free_heap_size() / 1024);
   cv.print(" KB");
   cv.setCursor(2, 52);
   cv.print("GPS Rdy: ");

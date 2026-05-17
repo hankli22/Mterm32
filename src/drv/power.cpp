@@ -29,7 +29,7 @@ void Power::init() {
     adcInit.unit_id = ADC_UNIT_1;
     adc_oneshot_new_unit(&adcInit, &adcHandle);
     adc_oneshot_chan_cfg_t chCfg = {};
-    chCfg.atten = ADC_ATTEN_DB_11;
+    chCfg.atten = ADC_ATTEN_DB_12;
     chCfg.bitwidth = ADC_BITWIDTH_12;
     adc_oneshot_config_channel(adcHandle, ADC_CHANNEL_0, &chCfg);
 }
