@@ -85,21 +85,21 @@ void UsbCdc::begin(unsigned long /*baud*/) {
 }
 
 int UsbCdc::available() {
-    size_t len = 0;
-    usb_serial_jtag_get_buffered_data_len(&len);
-    return (int)len;
+    if (hasPeek_) return 1;
+    int n = usb_serial_jtag_read_bytes(&peekChar_, 1, 0);
+    if (n > 0) { hasPeek_ = true; return 1; }
+    return 0;
 }
 
 int UsbCdc::read() {
-    uint8_t byte;
-    int n = usb_serial_jtag_read_bytes(&byte, 1, 0);
-    return (n > 0) ? (int)byte : -1;
+    if (hasPeek_) { hasPeek_ = false; return (int)peekChar_; }
+    uint8_t b;
+    int n = usb_serial_jtag_read_bytes(&b, 1, 0);
+    return (n > 0) ? (int)b : -1;
 }
 
 size_t UsbCdc::write(uint8_t byte) {
     return usb_serial_jtag_write_bytes(&byte, 1, 0);
 }
 
-void UsbCdc::setRxBufferSize(size_t /*size*/) {
-    // USB JTAG buffering is handled by the IDF driver; size hint ignored.
-}
+void UsbCdc::setRxBufferSize(size_t /*size*/) {}

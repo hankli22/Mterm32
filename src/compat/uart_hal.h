@@ -32,4 +32,7 @@ public:
     int  read();
     size_t write(uint8_t byte);
     void setRxBufferSize(size_t size);
+private:
+    uint8_t peekChar_;
+    bool    hasPeek_ = false;
 };

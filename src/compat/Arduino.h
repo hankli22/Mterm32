@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <math.h>
+#include "compat/compat.h"
 
 // TinyGPS++ uses PROGMEM for string storage on AVR. ESP32 has flat address
 // space, so these are no-ops.

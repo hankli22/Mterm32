@@ -1,7 +1,7 @@
 #ifndef CANVAS_H
 #define CANVAS_H
 
-#include "u8g2.h"
+#include "clib/u8g2.h"
 #include <string.h>
 #include <stdio.h>
 

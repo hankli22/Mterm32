@@ -1,6 +1,7 @@
 #ifndef DRV_BUTTONS_H
 #define DRV_BUTTONS_H
 
+#include <stdint.h>
 #include "board/board.h"
 
 class Buttons {
