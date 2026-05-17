@@ -2,6 +2,7 @@
 #define CANVAS_H
 
 #include "u8g2.h"
+#include "compat/compat.h"
 #include <string.h>
 #include <stdio.h>
 
