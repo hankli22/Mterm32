@@ -29,9 +29,13 @@ inline uint32_t millis() {
 #define sq(x)        ((x) * (x))
 
 inline char* dtostrf(double val, int width, int prec, char* buf) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-truncation"
-    snprintf(buf, (size_t)(width + 2), "%.*f", prec, val);
-#pragma GCC diagnostic pop
+    // NB: "width" = minimum field width (Arduino semantics), NOT buffer size.
+    // Format into temp buffer then copy — all callers allocate >= 16 bytes.
+    char tmp[32];
+    snprintf(tmp, sizeof(tmp), "%*.*f", width, prec, val);
+    size_t n = strlen(tmp);
+    if (n > (size_t)(width + prec + 7)) n = (size_t)(width + prec + 7);
+    memcpy(buf, tmp, n);
+    buf[n] = '\0';
     return buf;
 }
