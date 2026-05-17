@@ -11,6 +11,17 @@
 #include "driver/gpio.h"
 #include "esp_rom_sys.h"
 
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// WORKAROUND: Override bootloader_common_get_chip_size() via linker wrap.
+// ROM bootloader misidentifies the 4MB flash chip as 8MB (JEDEC ID
+// lookup bug). This forces the app to accept the actual 4MB size.
+// REMOVE when flash chip detection is fixed in ROM / ESP-IDF.
+// paired with build_flags: -Wl,--wrap=bootloader_common_get_chip_size
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+extern "C" uint32_t __wrap_bootloader_common_get_chip_size(void) {
+    return 4 * 1024 * 1024;  // 4MB
+}
+
 static UsbCdc pcSerial;
 
 TaskHandle_t uiTaskHandle;
