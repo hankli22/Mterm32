@@ -1,11 +1,11 @@
-#include "ui.h"
+#include "app/menu.h"
 #include "drv/display.h"
 #include "drv/buttons.h"
 #include "drv/power.h"
 #include "svc/gps.h"
 #include "svc/config.h"
 #include "lib/canvas.h"
-#include "src/pages.h"
+#include "app/pages.h"
 
 PageState MenuManager::currentPage = PAGE_SPLASH;
 int MenuManager::cursorIndex = 0;

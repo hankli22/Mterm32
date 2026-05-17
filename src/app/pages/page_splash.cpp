@@ -1,4 +1,4 @@
-#include "pages.h"
+#include "app/pages.h"
 
 void drawSplash(Canvas& cv) {
   cv.setFont(u8g2_font_wqy12_t_gb2312);

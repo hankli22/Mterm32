@@ -1,4 +1,4 @@
-#include "pages.h"
+#include "app/pages.h"
 #include "svc/gps.h"
 #include "svc/config.h"
 

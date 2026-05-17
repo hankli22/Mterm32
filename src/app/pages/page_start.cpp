@@ -1,5 +1,5 @@
-#include "pages.h"
-#include "ui.h"
+#include "app/pages.h"
+#include "app/menu.h"
 #include "drv/power.h"
 #include "svc/gps.h"
 #include "svc/config.h"

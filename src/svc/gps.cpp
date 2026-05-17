@@ -1,6 +1,6 @@
 #include "svc/gps.h"
 #include "svc/config.h"
-#include "ui.h"
+#include "app/menu.h"
 #include "board/board.h"
 
 bool GPSCalc::isRunning = false;
