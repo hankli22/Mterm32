@@ -1,0 +1,30 @@
+idf_component_register(
+    SRCS
+        "main.cpp"
+        "drv/display.cpp"
+        "drv/buttons.cpp"
+        "drv/power.cpp"
+        "svc/gps.cpp"
+        "svc/config.cpp"
+        "lib/kalman.cpp"
+        "app/menu.cpp"
+        "app/pages/page_splash.cpp"
+        "app/pages/page_start.cpp"
+        "app/pages/page_settings.cpp"
+        "app/pages/page_dev.cpp"
+        "app/pages/page_sat.cpp"
+        "app/pages/page_sport.cpp"
+        "app/pages/page_summary.cpp"
+    INCLUDE_DIRS
+        "."
+        "board"
+        "drv"
+        "lib"
+        "svc"
+        "app"
+    REQUIRES
+        driver
+        esp_timer
+        nvs_flash
+        spi_flash
+)

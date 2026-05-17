@@ -4,7 +4,7 @@
 #include "drv/power.h"
 #include "svc/gps.h"
 #include "app/menu.h"
-#include "svc/config.h"
+ 
 #pragma GCC optimize("O2")
 
 
