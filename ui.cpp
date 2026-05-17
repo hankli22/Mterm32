@@ -2,7 +2,7 @@
 #include "hardwareLayer.h"
 #include "gps_module.h"
 #include "config.h"
-#include "canvas.h"
+#include "lib/canvas.h"
 #include "src/pages.h"
 
 PageState MenuManager::currentPage = PAGE_SPLASH;

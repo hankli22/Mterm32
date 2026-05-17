@@ -2,7 +2,7 @@
 #include "ui.h"
 #include "gps_module.h"
 #include "config.h"
-#include "trig_lut.h"
+#include "lib/trig_lut.h"
 #include <stdio.h>
 
 void drawSatTxt(Canvas& cv) {

@@ -1,7 +1,7 @@
 #ifndef PAGES_H
 #define PAGES_H
 
-#include "canvas.h"
+#include "lib/canvas.h"
 
 void drawSplash(Canvas& cv);
 void drawStartMenu(Canvas& cv);
