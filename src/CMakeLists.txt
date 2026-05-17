@@ -1,6 +1,8 @@
 idf_component_register(
     SRCS
         "main.cpp"
+        "compat/uart_hal.cpp"
+        "ext/TinyGPS/TinyGPS++.cpp"
         "drv/display.cpp"
         "drv/buttons.cpp"
         "drv/power.cpp"
@@ -17,6 +19,8 @@ idf_component_register(
         "app/pages/page_summary.cpp"
     INCLUDE_DIRS
         "."
+        "compat"
+        "ext/TinyGPS"
         "board"
         "drv"
         "lib"

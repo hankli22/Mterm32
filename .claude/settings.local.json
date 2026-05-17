@@ -12,7 +12,9 @@
       "Bash(git *)",
       "Bash(Get-ChildItem -Path \"D:\\\\Documents\\\\Arduino\\\\Mterm32\" -Depth 1)",
       "Bash(Select-Object Mode, Name)",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "Bash(cp /tmp/TinyGPSPlus/src/TinyGPS++.h \"D:\\\\Documents\\\\Arduino\\\\Mterm32\\\\src\\\\ext\\\\TinyGPS\\\\TinyGPS++.h\")",
+      "Bash(cp /tmp/TinyGPSPlus/src/TinyGPS++.cpp \"D:\\\\Documents\\\\Arduino\\\\Mterm32\\\\src\\\\ext\\\\TinyGPS\\\\TinyGPS++.cpp\")"
     ]
   }
 }
