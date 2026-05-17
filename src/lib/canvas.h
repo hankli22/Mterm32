@@ -1,24 +1,24 @@
 #ifndef CANVAS_H
 #define CANVAS_H
 
-#include <U8g2lib.h>
+#include "u8g2.h"
 #include <string.h>
 #include <stdio.h>
 
 class Canvas {
   uint8_t buf[1024];   // 128x64 / 8
-  U8G2* u8g2;
+  u8g2_t* u8g2;
   int cursorX, cursorY;
 
 public:
-  Canvas(U8G2* u) : u8g2(u), cursorX(0), cursorY(0) { clear(); }
+  Canvas(u8g2_t* u) : u8g2(u), cursorX(0), cursorY(0) { clear(); }
 
   void clear() { memset(buf, 0, 1024); }
   uint8_t* getBufferPtr() { return buf; }
 
-  void setDrawColor(uint8_t c) { u8g2->setDrawColor(c); }
-  void setFont(const uint8_t* f) { u8g2->setFont(f); u8g2->enableUTF8Print(); }
-  void setCursor(int x, int y) { cursorX = x; cursorY = y; u8g2->setCursor(x, y); }
+  void setDrawColor(uint8_t c) { u8g2_SetDrawColor(u8g2, c); }
+  void setFont(const uint8_t* f) { u8g2_SetFont(u8g2, f); }
+  void setCursor(int x, int y) { cursorX = x; cursorY = y; }
 
   // --- Pixel ops ---
   void setPixel(int x, int y) {
@@ -30,7 +30,7 @@ public:
     buf[(y >> 3) * 128 + x] &= ~(1 << (y & 7));
   }
   void drawPixel(int x, int y) {
-    if (u8g2->getDrawColor() == 1) setPixel(x, y);
+    if (u8g2_GetDrawColor(u8g2) == 1) setPixel(x, y);
     else clearPixel(x, y);
   }
 
@@ -80,11 +80,10 @@ public:
 
   // --- Text (delegated to U8g2 with buffer swap) ---
   int drawStr(int x, int y, const char* s) {
-    u8g2_t* u = u8g2->getU8g2();
-    uint8_t* save = u->tile_buf_ptr;
-    u->tile_buf_ptr = buf;
-    int w = u8g2->drawUTF8(x, y, s);
-    u->tile_buf_ptr = save;
+    uint8_t* save = u8g2->tile_buf_ptr;
+    u8g2->tile_buf_ptr = buf;
+    int w = u8g2_DrawUTF8(u8g2, x, y, s);
+    u8g2->tile_buf_ptr = save;
     return w;
   }
 
@@ -98,12 +97,11 @@ public:
   void print(float f, int d)      { char b[16]; dtostrf(f, 1, d, b); print(b); }
   void print(double f, int d)     { char b[16]; dtostrf((float)f, 1, d, b); print(b); }
 
-  // UTF-8 versions (redirect to drawStr)
   int drawUTF8(int x, int y, const char* s) { return drawStr(x, y, s); }
 
   // --- Copy to U8g2 framebuffer ---
-  void blitTo(U8G2* dst, int dx, int dy) {
-    uint8_t* dstBuf = dst->getBufferPtr();
+  void blitTo(u8g2_t* dst, int dx, int dy) {
+    uint8_t* dstBuf = u8g2_GetBufferPtr(dst);
     for (int y = 0; y < 64; y++) {
       int dy2 = y + dy;
       if ((unsigned)dy2 >= 64) continue;
@@ -120,9 +118,8 @@ public:
     }
   }
 
-  // Full copy (when no offset)
-  void blitTo(U8G2* dst) {
-    memcpy(dst->getBufferPtr(), buf, 1024);
+  void blitTo(u8g2_t* dst) {
+    memcpy(u8g2_GetBufferPtr(dst), buf, 1024);
   }
 };
 

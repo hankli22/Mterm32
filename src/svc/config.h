@@ -1,8 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <Arduino.h>
-
 struct SystemConfig {
   float record_freq = 5.0;
   bool draw_track = true;
